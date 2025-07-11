@@ -1,1 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Turnos en Vivo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    .video-container {
+      flex: 7;
+      background: #000;
+    }
+    .video-container video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .turnos-container {
+      flex: 3;
+      background: #111;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .turno {
+      background: #222;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      font-size: 1.5rem;
+    }
+    .turno .nombre {
+      font-weight: bold;
+    }
+    .turno .numero {
+      font-size: 2rem;
+      color: #0f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="video-container">
+    <video autoplay muted loop>
+      <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
+      Tu navegador no soporta el video.
+    </video>
+  </div>
+  <div class="turnos-container">
+    <div class="turno">
+      <div class="nombre">Juan Pérez</div>
+      <div class="numero">Turno N° 101</div>
+    </div>
+    <div class="turno">
+      <div class="nombre">Ana Rodríguez</div>
+      <div class="numero">Turno N° 102</div>
+    </div>
+    <div class="turno">
+      <div class="nombre">Luis Gómez</div>
+      <div class="numero">Turno N° 103</div>
+    </div>
+  </div>
+</body>
+</html>
 
