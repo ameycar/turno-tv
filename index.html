@@ -2,56 +2,83 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Turnos en Pantalla</title>
+  <title>Turnos - Centro Médico DR. Luis Quito</title>
   <style>
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       display: flex;
       height: 100vh;
-      overflow: hidden;
     }
-    #video-container {
-      flex: 2;
+    #video {
+      flex: 3;
       background: black;
     }
-    #turnos-container {
+    #panel {
       flex: 1;
-      background: #f8f8f8;
-      padding: 20px;
-      overflow-y: auto;
+      background-color: #f8f9fa;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
     h2 {
       text-align: center;
+      color: #c40000;
     }
-    .turno {
+    .paciente {
+      background-color: #cce5ff;
+      border: 2px solid #007bff;
+      border-radius: 20px;
+      padding: 20px;
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    .ultimos {
+      font-size: 1rem;
+      background-color: #fff;
+      padding: 5px;
+      border-radius: 10px;
+      overflow-y: auto;
+      max-height: 200px;
+    }
+    .sonido-boton {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .sonido-boton button {
       padding: 10px;
-      margin: 10px 0;
-      background: #ffe680;
-      border-left: 5px solid #ffcc00;
-      font-size: 1.2em;
-    }
-    button {
-      font-size: 1em;
-      margin-top: 5px;
+      font-size: 1.2rem;
+      background-color: #004080;
+      color: white;
+      border: none;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
-
-  <div id="video-container">
-    <video autoplay muted loop style="width: 100%; height: 100%; object-fit: cover;">
+  <div id="video">
+    <video id="videoPlayer" autoplay loop muted style="width: 100%; height: 100%;">
       <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
-      Tu navegador no soporta video HTML5.
+      Tu navegador no soporta el video.
     </video>
   </div>
-
-  <div id="turnos-container">
-    <h2>Turnos en Atención</h2>
-    <div id="turnos"></div>
+  <div id="panel">
+    <div>
+      <h2>Turno Actual</h2>
+      <div id="paciente-llamado" class="paciente">Esperando...</div>
+      <div class="sonido-boton">
+        <button onclick="activarSonido()">🔊 Activar sonido</button>
+      </div>
+    </div>
+    <div class="ultimos" id="ultimos-llamados">
+      <strong>Últimos llamados:</strong>
+      <ul id="lista-ultimos"></ul>
+    </div>
   </div>
 
-  <!-- Firebase y JS -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
@@ -68,44 +95,53 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const turnosDiv = document.getElementById('turnos');
+    let audioEnabled = false;
+    let audio = new Audio("https://www.soundjay.com/button/beep-07.wav");
 
-    function cargarTurnos() {
-      db.ref('pacientes').on('value', snapshot => {
-        turnosDiv.innerHTML = '';
-        snapshot.forEach(child => {
-          const p = child.val();
-          const key = child.key;
-          if (p.estado === 'En atención') {
-            const div = document.createElement('div');
-            div.className = 'turno';
-            div.innerHTML = `
-              <strong>${p.nombres} ${p.apellidos}</strong><br>
-              <span style="font-size:0.9em;">${p.estudios}</span><br>
-              <button onclick="llamarOtraVez('${key}', '${p.nombres}', '${p.apellidos}')">📢 Llamar otra vez</button>
-            `;
-            turnosDiv.appendChild(div);
-            if (p.repetir) {
-              reproducirSonido(`${p.nombres} ${p.apellidos}`);
-              db.ref('pacientes/' + key).update({ repetir: false });
-            }
-          }
-        });
+    function activarSonido() {
+      audioEnabled = true;
+      audio.play();
+    }
+
+    function llamarPaciente(nombre, estudio, key) {
+      const texto = `Siguiente turno: ${nombre}, área de ${estudio}`;
+      const voz = new SpeechSynthesisUtterance(texto);
+      voz.lang = 'es-PE';
+      if (audioEnabled) {
+        audio.play();
+        setTimeout(() => {
+          speechSynthesis.speak(voz);
+        }, 1000);
+      }
+
+      document.getElementById("paciente-llamado").textContent = nombre;
+
+      // Agregar a la lista de últimos
+      const li = document.createElement("li");
+      li.textContent = `${nombre} - ${estudio}`;
+      document.getElementById("lista-ultimos").prepend(li);
+
+      // Limitar a 5 últimos
+      const lista = document.getElementById("lista-ultimos");
+      while (lista.children.length > 5) {
+        lista.removeChild(lista.lastChild);
+      }
+
+      // Marcar que ya fue llamado (para evitar repetir)
+      db.ref("pacientes/" + key).update({ repetir: false });
+    }
+
+    db.ref("pacientes").on("value", snapshot => {
+      snapshot.forEach(child => {
+        const p = child.val();
+        if ((p.estado === "En atención" || p.repetir === true) && p.key !== lastKey) {
+          llamarPaciente(`${p.nombres} ${p.apellidos}`, p.estudios, child.key);
+          lastKey = child.key;
+        }
       });
-    }
+    });
 
-    function llamarOtraVez(key, nombres, apellidos) {
-      db.ref('pacientes/' + key).update({ repetir: true });
-    }
-
-    function reproducirSonido(nombreCompleto) {
-      const mensaje = new SpeechSynthesisUtterance("Paciente " + nombreCompleto + ", por favor acérquese.");
-      mensaje.lang = 'es-PE';
-      window.speechSynthesis.speak(mensaje);
-    }
-
-    cargarTurnos();
+    let lastKey = null;
   </script>
-
 </body>
 </html>
