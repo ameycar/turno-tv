@@ -3,17 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Turnos en Vivo</title>
+  <title>Centro Médico DR. Luis Quito</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       display: flex;
       height: 100vh;
-      background: #000;
-      color: #fff;
+      background: #fff;
       font-family: Arial, sans-serif;
     }
     .video-container {
@@ -27,23 +24,54 @@
     }
     .turnos-container {
       flex: 3;
-      background: #111;
+      background: #e0e0e0;
+      display: flex;
+      flex-direction: column;
       padding: 1rem;
       overflow-y: auto;
     }
+    .header {
+      background-color: #c8102e;
+      color: white;
+      text-align: center;
+      padding: 0.8rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+    }
     .turno {
-      background: #222;
+      background: #ffffff;
       margin-bottom: 1rem;
       padding: 1rem;
+      border-left: 8px solid #0074c1;
       border-radius: 0.5rem;
-      font-size: 1.5rem;
+      color: #000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .turno .nombre {
       font-weight: bold;
     }
     .turno .numero {
-      font-size: 2rem;
-      color: #0f0;
+      font-size: 1.5rem;
+      color: #c8102e;
+    }
+    .ultimos-llamados {
+      margin-top: auto;
+      border-top: 2px solid #999;
+      padding-top: 1rem;
+    }
+    .ultimos-llamados h3 {
+      margin: 0 0 0.5rem 0;
+      color: #333;
+    }
+    .llamado {
+      font-size: 1rem;
+      background: #f9f9f9;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+      border-left: 5px solid #0074c1;
     }
   </style>
 </head>
@@ -55,6 +83,8 @@
     </video>
   </div>
   <div class="turnos-container">
+    <div class="header">Centro Médico DR. Luis Quito</div>
+
     <div class="turno">
       <div class="nombre">Juan Pérez</div>
       <div class="numero">Turno N° 101</div>
@@ -67,7 +97,26 @@
       <div class="nombre">Luis Gómez</div>
       <div class="numero">Turno N° 103</div>
     </div>
+
+    <div class="ultimos-llamados">
+      <h3>Últimos llamados</h3>
+      <div class="llamado">🕓 Juan Pérez - 10:21 AM</div>
+      <div class="llamado">🕓 Ana Rodríguez - 10:19 AM</div>
+      <div class="llamado">🕓 Luis Gómez - 10:17 AM</div>
+    </div>
   </div>
+
+  <audio id="timbre" src="https://cdn.pixabay.com/audio/2022/03/15/audio_d646b6a2f8.mp3"></audio>
+
+  <script>
+    function llamarPaciente(nombre) {
+      document.getElementById('timbre').play();
+      const mensaje = new SpeechSynthesisUtterance("Siguiente turno: " + nombre + ". Área de ecografía.");
+      speechSynthesis.speak(mensaje);
+    }
+
+    // Simulación de llamado (solo para demo):
+    setTimeout(() => { llamarPaciente("Juan Pérez"); }, 2000);
+  </script>
 </body>
 </html>
-
