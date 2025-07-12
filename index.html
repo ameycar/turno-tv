@@ -163,16 +163,16 @@
         }
       }
 
-      pacientes.forEach((p, i) => {
-        const div = document.createElement("div");
-        div.className = "paciente";
-        div.innerHTML = `
-          <div class="nombre">${p.nombres} ${p.apellidos}</div>
-          <div class="turno">Turno N° ${i + 1}</div>
-        `;
-        pacientesCont.appendChild(div);
-      });
-    });
+     pacientes.forEach((p, i) => {
+  const div = document.createElement("div");
+  div.className = "paciente";
+  div.innerHTML = `
+    <div class="nombre">${p.nombres} ${p.apellidos}</div>
+    <div class="turno">Turno N° ${i + 1}</div>
+    ${p.estado === "En atención" ? `<button onclick="llamarPaciente('${p.nombres} ${p.apellidos}')">📢 Llamar otra vez</button>` : ""}
+  `;
+  pacientesCont.appendChild(div);
+});
 
     function renderUltimos() {
       ultimosCont.innerHTML = "";
