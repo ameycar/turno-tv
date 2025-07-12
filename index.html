@@ -7,13 +7,13 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
-    /* Estilos personalizados */
     body {
       margin: 0;
       display: flex;
       height: 100vh;
-      background: white;
       font-family: sans-serif;
+      background: white;
+      cursor: pointer;
     }
     .video {
       flex: 7;
@@ -25,7 +25,7 @@
     }
     .panel {
       flex: 3;
-      background: #f0f0f0;
+      background: #f3f3f3;
       display: flex;
       flex-direction: column;
       padding: 1rem;
@@ -67,9 +67,25 @@
       border-left: 5px solid #0074c1;
       border-radius: 0.3rem;
     }
+    #activador {
+      position: fixed;
+      top: 0;
+      left: 0;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      z-index: 9999;
+    }
   </style>
 </head>
-<body>
+<body onclick="activarSonido()">
+  <div id="activador">Haz clic para activar sonido</div>
+
   <div class="video">
     <video autoplay muted loop>
       <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
@@ -88,6 +104,7 @@
   <audio id="timbre" src="https://cdn.pixabay.com/audio/2022/03/15/audio_d646b6a2f8.mp3"></audio>
 
   <script>
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCEOE...",
       authDomain: "estado-pacientes.firebaseapp.com",
@@ -105,6 +122,27 @@
     const timbre = document.getElementById("timbre");
 
     let ultimos = [];
+    let audioHabilitado = false;
+    let vocesDisponibles = [];
+
+    speechSynthesis.onvoiceschanged = () => {
+      vocesDisponibles = speechSynthesis.getVoices();
+    };
+
+    function hablar(texto) {
+      if (!audioHabilitado) return;
+      const voz = new SpeechSynthesisUtterance(texto);
+      const preferida = vocesDisponibles.find(v => v.lang.startsWith("es") && v.name.toLowerCase().includes("google"));
+      voz.voice = preferida || vocesDisponibles.find(v => v.lang.startsWith("es")) || null;
+      speechSynthesis.speak(voz);
+    }
+
+    function activarSonido() {
+      audioHabilitado = true;
+      document.getElementById("activador").style.display = "none";
+      timbre.play();
+      hablar("Sistema activado.");
+    }
 
     db.ref("pacientes").on("value", (snap) => {
       pacientesCont.innerHTML = "";
@@ -147,9 +185,9 @@
     }
 
     function llamarPaciente(nombre) {
+      if (!audioHabilitado) return;
       timbre.play();
-      const msg = new SpeechSynthesisUtterance("Siguiente turno: " + nombre + ". Área de ecografía.");
-      speechSynthesis.speak(msg);
+      hablar("Siguiente turno: " + nombre + ". Área de ecografía.");
     }
   </script>
 </body>
