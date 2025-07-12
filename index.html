@@ -2,121 +2,155 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Centro Médico DR. Luis Quito</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
-    * { box-sizing: border-box; }
+    /* Estilos personalizados */
     body {
       margin: 0;
       display: flex;
       height: 100vh;
-      background: #fff;
-      font-family: Arial, sans-serif;
+      background: white;
+      font-family: sans-serif;
     }
-    .video-container {
+    .video {
       flex: 7;
-      background: #000;
     }
-    .video-container video {
+    .video video {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-    .turnos-container {
+    .panel {
       flex: 3;
-      background: #e0e0e0;
+      background: #f0f0f0;
       display: flex;
       flex-direction: column;
       padding: 1rem;
       overflow-y: auto;
     }
-    .header {
-      background-color: #c8102e;
+    .titulo {
+      background: #c8102e;
       color: white;
       text-align: center;
-      padding: 0.8rem;
+      padding: 1rem;
       font-size: 1.5rem;
       font-weight: bold;
-      border-radius: 0.5rem;
+      border-radius: 1rem;
       margin-bottom: 1rem;
+    }
+    .paciente {
+      background: white;
+      border-left: 6px solid #0074c1;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+    }
+    .nombre {
+      font-weight: bold;
+      font-size: 1.2rem;
     }
     .turno {
-      background: #ffffff;
-      margin-bottom: 1rem;
-      padding: 1rem;
-      border-left: 8px solid #0074c1;
-      border-radius: 0.5rem;
-      color: #000;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .turno .nombre {
-      font-weight: bold;
-    }
-    .turno .numero {
-      font-size: 1.5rem;
       color: #c8102e;
     }
-    .ultimos-llamados {
+    .llamados {
       margin-top: auto;
-      border-top: 2px solid #999;
-      padding-top: 1rem;
-    }
-    .ultimos-llamados h3 {
-      margin: 0 0 0.5rem 0;
-      color: #333;
+      border-top: 1px solid #ccc;
+      padding-top: 0.5rem;
     }
     .llamado {
-      font-size: 1rem;
-      background: #f9f9f9;
-      margin-bottom: 0.5rem;
-      padding: 0.5rem;
-      border-radius: 0.25rem;
+      background: #e1e1e1;
+      margin: 0.3rem 0;
+      padding: 0.4rem;
       border-left: 5px solid #0074c1;
+      border-radius: 0.3rem;
     }
   </style>
 </head>
 <body>
-  <div class="video-container">
+  <div class="video">
     <video autoplay muted loop>
       <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
-      Tu navegador no soporta el video.
     </video>
   </div>
-  <div class="turnos-container">
-    <div class="header">Centro Médico DR. Luis Quito</div>
 
-    <div class="turno">
-      <div class="nombre">Juan Pérez</div>
-      <div class="numero">Turno N° 101</div>
-    </div>
-    <div class="turno">
-      <div class="nombre">Ana Rodríguez</div>
-      <div class="numero">Turno N° 102</div>
-    </div>
-    <div class="turno">
-      <div class="nombre">Luis Gómez</div>
-      <div class="numero">Turno N° 103</div>
-    </div>
-
-    <div class="ultimos-llamados">
+  <div class="panel">
+    <div class="titulo">Centro Médico DR. Luis Quito</div>
+    <div id="pacientes"></div>
+    <div class="llamados">
       <h3>Últimos llamados</h3>
-      <div class="llamado">🕓 Juan Pérez - 10:21 AM</div>
-      <div class="llamado">🕓 Ana Rodríguez - 10:19 AM</div>
-      <div class="llamado">🕓 Luis Gómez - 10:17 AM</div>
+      <div id="ultimos"></div>
     </div>
   </div>
 
   <audio id="timbre" src="https://cdn.pixabay.com/audio/2022/03/15/audio_d646b6a2f8.mp3"></audio>
 
   <script>
-    function llamarPaciente(nombre) {
-      document.getElementById('timbre').play();
-      const mensaje = new SpeechSynthesisUtterance("Siguiente turno: " + nombre + ". Área de ecografía.");
-      speechSynthesis.speak(mensaje);
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEOE...",
+      authDomain: "estado-pacientes.firebaseapp.com",
+      databaseURL: "https://estado-pacientes-default-rtdb.firebaseio.com",
+      projectId: "estado-pacientes",
+      storageBucket: "estado-pacientes.appspot.com",
+      messagingSenderId: "XXXX",
+      appId: "1:XXXX:web:XXXX"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const pacientesCont = document.getElementById("pacientes");
+    const ultimosCont = document.getElementById("ultimos");
+    const timbre = document.getElementById("timbre");
+
+    let ultimos = [];
+
+    db.ref("pacientes").on("value", (snap) => {
+      pacientesCont.innerHTML = "";
+      const data = snap.val();
+      const pacientes = [];
+
+      for (let id in data) {
+        const p = data[id];
+        if (p.estado === "En espera") {
+          pacientes.push({ id, ...p });
+        }
+
+        if (p.estado === "En atención" && !ultimos.some(x => x.id === id)) {
+          llamarPaciente(p.nombres + " " + p.apellidos);
+          ultimos.unshift({ id, nombre: p.nombres + " " + p.apellidos, hora: new Date().toLocaleTimeString() });
+          ultimos = ultimos.slice(0, 3);
+          renderUltimos();
+        }
+      }
+
+      pacientes.forEach((p, i) => {
+        const div = document.createElement("div");
+        div.className = "paciente";
+        div.innerHTML = `
+          <div class="nombre">${p.nombres} ${p.apellidos}</div>
+          <div class="turno">Turno N° ${i + 1}</div>
+        `;
+        pacientesCont.appendChild(div);
+      });
+    });
+
+    function renderUltimos() {
+      ultimosCont.innerHTML = "";
+      ultimos.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "llamado";
+        div.textContent = `🕓 ${p.nombre} - ${p.hora}`;
+        ultimosCont.appendChild(div);
+      });
     }
 
-    // Simulación de llamado (solo para demo):
-    setTimeout(() => { llamarPaciente("Juan Pérez"); }, 2000);
+    function llamarPaciente(nombre) {
+      timbre.play();
+      const msg = new SpeechSynthesisUtterance("Siguiente turno: " + nombre + ". Área de ecografía.");
+      speechSynthesis.speak(msg);
+    }
   </script>
 </body>
 </html>
