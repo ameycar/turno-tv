@@ -1,147 +1,194 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Turnos - Centro Médico DR. Luis Quito</title>
+  <meta charset="UTF-8" />
+  <title>Centro Médico DR. Luis Quito</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
       display: flex;
       height: 100vh;
+      font-family: sans-serif;
+      background: white;
+      cursor: pointer;
     }
-    #video {
+    .video {
+      flex: 7;
+    }
+    .video video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .panel {
       flex: 3;
-      background: black;
-    }
-    #panel {
-      flex: 1;
-      background-color: #f8f9fa;
-      padding: 10px;
+      background: #f3f3f3;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      padding: 1rem;
+      overflow-y: auto;
     }
-    h2 {
+    .titulo {
+      background: #c8102e;
+      color: white;
       text-align: center;
-      color: #c40000;
+      padding: 1rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+      border-radius: 1rem;
+      margin-bottom: 1rem;
     }
     .paciente {
-      background-color: #cce5ff;
-      border: 2px solid #007bff;
-      border-radius: 20px;
-      padding: 20px;
-      text-align: center;
-      font-size: 2rem;
-      margin-bottom: 10px;
+      background: white;
+      border-left: 6px solid #0074c1;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
     }
-    .ultimos {
-      font-size: 1rem;
-      background-color: #fff;
-      padding: 5px;
-      border-radius: 10px;
-      overflow-y: auto;
-      max-height: 200px;
-    }
-    .sonido-boton {
-      text-align: center;
-      margin-bottom: 10px;
-    }
-    .sonido-boton button {
-      padding: 10px;
+    .nombre {
+      font-weight: bold;
       font-size: 1.2rem;
-      background-color: #004080;
+    }
+    .turno {
+      color: #c8102e;
+    }
+    .llamados {
+      margin-top: auto;
+      border-top: 1px solid #ccc;
+      padding-top: 0.5rem;
+    }
+    .llamado {
+      background: #e1e1e1;
+      margin: 0.3rem 0;
+      padding: 0.4rem;
+      border-left: 5px solid #0074c1;
+      border-radius: 0.3rem;
+    }
+    #activador {
+      position: fixed;
+      top: 0;
+      left: 0;
+      background: rgba(0,0,0,0.7);
       color: white;
-      border: none;
-      border-radius: 8px;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      z-index: 9999;
     }
   </style>
 </head>
-<body>
-  <div id="video">
-    <video id="videoPlayer" autoplay loop muted style="width: 100%; height: 100%;">
-      <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
-      Tu navegador no soporta el video.
+<body onclick="activarSonido()">
+  <div id="activador">Haz clic para activar sonido</div>
+
+  <div class="video">
+    <video autoplay muted loop>
+      <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
     </video>
   </div>
-  <div id="panel">
-    <div>
-      <h2>Turno Actual</h2>
-      <div id="paciente-llamado" class="paciente">Esperando...</div>
-      <div class="sonido-boton">
-        <button onclick="activarSonido()">🔊 Activar sonido</button>
-      </div>
-    </div>
-    <div class="ultimos" id="ultimos-llamados">
-      <strong>Últimos llamados:</strong>
-      <ul id="lista-ultimos"></ul>
+
+  <div class="panel">
+    <div class="titulo">Centro Médico DR. Luis Quito</div>
+    <div id="pacientes"></div>
+    <div class="llamados">
+      <h3>Últimos llamados</h3>
+      <div id="ultimos"></div>
     </div>
   </div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <audio id="timbre" src="https://cdn.pixabay.com/audio/2022/03/15/audio_d646b6a2f8.mp3"></audio>
 
   <script>
+    // Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyAX2VYw2XVs6DGsw38rCFaSbk3VuUA60y4",
+      apiKey: "AIzaSyCEOE...",
       authDomain: "estado-pacientes.firebaseapp.com",
       databaseURL: "https://estado-pacientes-default-rtdb.firebaseio.com",
       projectId: "estado-pacientes",
       storageBucket: "estado-pacientes.appspot.com",
-      messagingSenderId: "515522648971",
-      appId: "1:515522648971:web:d7b6e9cde4a7d36181ad8e"
+      messagingSenderId: "XXXX",
+      appId: "1:XXXX:web:XXXX"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let audioEnabled = false;
-    let audio = new Audio("https://www.soundjay.com/button/beep-07.wav");
+    const pacientesCont = document.getElementById("pacientes");
+    const ultimosCont = document.getElementById("ultimos");
+    const timbre = document.getElementById("timbre");
+
+    let ultimos = [];
+    let audioHabilitado = false;
+    let vocesDisponibles = [];
+
+    speechSynthesis.onvoiceschanged = () => {
+      vocesDisponibles = speechSynthesis.getVoices();
+    };
+
+    function hablar(texto) {
+      if (!audioHabilitado) return;
+      const voz = new SpeechSynthesisUtterance(texto);
+      const preferida = vocesDisponibles.find(v => v.lang.startsWith("es") && v.name.toLowerCase().includes("google"));
+      voz.voice = preferida || vocesDisponibles.find(v => v.lang.startsWith("es")) || null;
+      speechSynthesis.speak(voz);
+    }
 
     function activarSonido() {
-      audioEnabled = true;
-      audio.play();
+      audioHabilitado = true;
+      document.getElementById("activador").style.display = "none";
+      timbre.play();
+      hablar("Sistema activado.");
     }
 
-    function llamarPaciente(nombre, estudio, key) {
-      const texto = `Siguiente turno: ${nombre}, área de ${estudio}`;
-      const voz = new SpeechSynthesisUtterance(texto);
-      voz.lang = 'es-PE';
-      if (audioEnabled) {
-        audio.play();
-        setTimeout(() => {
-          speechSynthesis.speak(voz);
-        }, 1000);
-      }
+    db.ref("pacientes").on("value", (snap) => {
+      pacientesCont.innerHTML = "";
+      const data = snap.val();
+      const pacientes = [];
 
-      document.getElementById("paciente-llamado").textContent = nombre;
-
-      // Agregar a la lista de últimos
-      const li = document.createElement("li");
-      li.textContent = `${nombre} - ${estudio}`;
-      document.getElementById("lista-ultimos").prepend(li);
-
-      // Limitar a 5 últimos
-      const lista = document.getElementById("lista-ultimos");
-      while (lista.children.length > 5) {
-        lista.removeChild(lista.lastChild);
-      }
-
-      // Marcar que ya fue llamado (para evitar repetir)
-      db.ref("pacientes/" + key).update({ repetir: false });
-    }
-
-    db.ref("pacientes").on("value", snapshot => {
-      snapshot.forEach(child => {
-        const p = child.val();
-        if ((p.estado === "En atención" || p.repetir === true) && p.key !== lastKey) {
-          llamarPaciente(`${p.nombres} ${p.apellidos}`, p.estudios, child.key);
-          lastKey = child.key;
+      for (let id in data) {
+        const p = data[id];
+        if (p.estado === "En espera") {
+          pacientes.push({ id, ...p });
         }
+
+        if (p.estado === "En atención" && !ultimos.some(x => x.id === id)) {
+          llamarPaciente(p.nombres + " " + p.apellidos);
+          ultimos.unshift({ id, nombre: p.nombres + " " + p.apellidos, hora: new Date().toLocaleTimeString() });
+          ultimos = ultimos.slice(0, 3);
+          renderUltimos();
+        }
+      }
+
+      pacientes.forEach((p, i) => {
+        const div = document.createElement("div");
+        div.className = "paciente";
+        div.innerHTML = `
+          <div class="nombre">${p.nombres} ${p.apellidos}</div>
+          <div class="turno">Turno N° ${i + 1}</div>
+        `;
+        pacientesCont.appendChild(div);
       });
     });
 
-    let lastKey = null;
+    function renderUltimos() {
+      ultimosCont.innerHTML = "";
+      ultimos.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "llamado";
+        div.textContent = `🕓 ${p.nombre} - ${p.hora}`;
+        ultimosCont.appendChild(div);
+      });
+    }
+
+    function llamarPaciente(nombre) {
+      if (!audioHabilitado) return;
+      timbre.play();
+      hablar("Siguiente turno: " + nombre + ". Área de ecografía.");
+    }
   </script>
 </body>
 </html>
