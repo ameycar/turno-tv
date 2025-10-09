@@ -4,162 +4,188 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Turnos - Centro Médico DR. Luis Quito</title>
-  <link rel="stylesheet" href="../style.css" />
+
+  <!-- Estilo tipo clínica moderna -->
   <style>
     body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(120deg, #f4f8fb, #e9eef2);
       display: flex;
       height: 100vh;
-      background-color: #f4f6f9;
-      color: #222;
       overflow: hidden;
-      font-family: "Poppins", sans-serif;
+      color: #1a1a1a;
     }
 
-    /* Video a la izquierda */
     .video-container {
-      flex: 2;
-      background: black;
+      flex: 3;
+      position: relative;
+      overflow: hidden;
+      background: #000;
     }
 
-    video {
+    .video-container video,
+    .video-container iframe {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
 
-    /* Panel de turnos a la derecha */
-    .panel {
-      flex: 1;
+    .panel-turnos {
+      flex: 1.2;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      padding: 1rem;
-      background: linear-gradient(180deg, #004aad, #007fff);
-      color: white;
+      background: #ffffff;
+      border-left: 4px solid #0077b6;
+      box-shadow: -4px 0 10px rgba(0,0,0,0.1);
     }
 
-    .titulo {
+    header {
+      background: #0077b6;
+      color: #fff;
+      padding: 12px;
       text-align: center;
-      font-size: 1.5rem;
-      font-weight: bold;
+      font-size: 1.4em;
+      font-weight: 600;
     }
 
-    .turno-actual {
+    #turno-actual {
       flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
-      font-size: 2rem;
-      background-color: white;
-      color: #004aad;
-      border-radius: 20px;
-      box-shadow: 0 0 15px rgba(255,255,255,0.3);
-      margin: 10px 0;
-      padding: 20px;
+      align-items: center;
+      text-align: center;
+      background: #f1f9ff;
     }
 
-    .ultimos {
-      background-color: rgba(255,255,255,0.2);
-      border-radius: 15px;
-      padding: 10px;
-      overflow-y: auto;
-    }
-
-    .ultimos h3 {
+    #turno-actual h2 {
+      font-size: 2.2em;
       margin: 0;
-      font-size: 1.2rem;
-      border-bottom: 2px solid white;
-      padding-bottom: 5px;
+      color: #023e8a;
     }
 
-    .ultimos ul {
+    #turno-actual p {
+      font-size: 1.3em;
+      margin-top: 8px;
+    }
+
+    #ultimos-turnos {
+      background: #fafafa;
+      padding: 10px;
+      flex-shrink: 0;
+      border-top: 1px solid #ddd;
+    }
+
+    #ultimos-turnos h3 {
+      margin: 0 0 6px 0;
+      font-size: 1em;
+      color: #555;
+    }
+
+    #lista-ultimos {
       list-style: none;
       padding: 0;
       margin: 0;
+      font-size: 0.9em;
+      color: #333;
     }
 
-    .ultimos li {
-      padding: 5px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.3);
+    #lista-ultimos li {
+      padding: 3px 0;
+      border-bottom: 1px solid #eee;
     }
-
   </style>
 </head>
+
 <body>
-  <!-- Video -->
+  <!-- 🎥 VIDEO (elige entre local o YouTube) -->
   <div class="video-container">
-    <video autoplay loop muted>
+    <!-- 🔹 OPCIÓN 1: Video local -->
+    <video autoplay muted loop playsinline>
       <source src="video.mp4" type="video/mp4" />
-      Tu navegador no soporta video.
     </video>
+
+    <!-- 🔹 OPCIÓN 2: Si quieres usar YouTube, borra el <video> ↑ y pega este bloque ↓ -->
+    <!--
+    <iframe width="100%" height="100%"
+      src="https://www.youtube.com/embed/abcd1234?autoplay=1&loop=1&mute=1&playlist=abcd1234"
+      frameborder="0" allowfullscreen>
+    </iframe>
+    -->
   </div>
 
-  <!-- Panel lateral -->
-  <div class="panel">
-    <div class="titulo">
-      Centro Médico DR. Luis Quito<br />
-      <span id="nombreSede">Cargando sede...</span>
+  <!-- 📋 PANEL DE TURNOS -->
+  <div class="panel-turnos">
+    <header>Centro Médico DR. Luis Quito</header>
+
+    <div id="turno-actual">
+      <h2>Esperando turno...</h2>
+      <p></p>
     </div>
 
-    <div class="turno-actual" id="turnoActual">
-      Esperando pacientes...
-    </div>
-
-    <div class="ultimos">
-      <h3>Últimos llamados</h3>
-      <ul id="ultimosLlamados"></ul>
+    <div id="ultimos-turnos">
+      <h3>🕐 Últimos llamados</h3>
+      <ul id="lista-ultimos"></ul>
     </div>
   </div>
 
-  <audio id="sonido" src="notificacion.mp3" preload="auto"></audio>
+  <!-- 🔊 Sonido del timbre -->
+  <audio id="sonido-turno" src="notificacion.mp3" preload="auto"></audio>
 
+  <!-- 🔥 Firebase (v9) -->
   <script type="module">
-    import { db } from "../firebase-config.js";
-    import { ref, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-    // ✅ Definir sede actual (puede venir de la URL o configurarse fija)
-    const sedeActual = "Vitarte 1"; // ← cámbiala si este TV es de otra sede
-    document.getElementById("nombreSede").textContent = sedeActual;
+    const firebaseConfig = {
+      apiKey: "AIzaSyAX2VYw2XVs6DGsw38rCFaSbk3VuUA60y4",
+      authDomain: "estado-pacientes.firebaseapp.com",
+      databaseURL: "https://estado-pacientes-default-rtdb.firebaseio.com",
+      projectId: "estado-pacientes",
+      storageBucket: "estado-pacientes.appspot.com",
+      messagingSenderId: "515522648971",
+      appId: "1:515522648971:web:d7b6e9cde4a7d36181ad8e"
+    };
 
-    const turnoActual = document.getElementById("turnoActual");
-    const ultimosLlamados = document.getElementById("ultimosLlamados");
-    const sonido = document.getElementById("sonido");
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    const llamadoRef = ref(db, `llamados/${sedeActual}`);
+    const turnoActualDiv = document.getElementById("turno-actual");
+    const listaUltimos = document.getElementById("lista-ultimos");
+    const sonidoTurno = document.getElementById("sonido-turno");
 
-    // Escuchar nuevos llamados
-    onValue(llamadoRef, (snapshot) => {
+    // 🩺 Escuchar cambios desde Firebase
+    const sedeActual = "Vitarte 1"; // ✅ cambia esto según la sede del TV
+    const refPacientes = ref(db, "estado-pacientes");
+
+    let ultimoLlamado = "";
+
+    onValue(refPacientes, (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
 
-      const nombreCompleto = `${data.nombres} ${data.apellidos}`;
-      const area = data.area || "consultorio";
+      const pacientes = Object.values(data).filter(p => p.sede === sedeActual && p.estado === "En atención");
+      const pacienteActual = pacientes[pacientes.length - 1]; // último llamado
 
-      // 🖥️ Mostrar en pantalla
-      turnoActual.textContent = `${nombreCompleto}`;
-      turnoActual.style.background = "white";
-      turnoActual.style.color = "#004aad";
+      if (pacienteActual && pacienteActual.nombres + pacienteActual.apellidos !== ultimoLlamado) {
+        ultimoLlamado = pacienteActual.nombres + pacienteActual.apellidos;
 
-      // 🔔 Reproducir sonido
-      sonido.play().catch(() => {});
+        // Mostrar en pantalla
+        turnoActualDiv.innerHTML = `
+          <h2>${pacienteActual.nombres} ${pacienteActual.apellidos}</h2>
+          <p>Área: ${pacienteActual.estudios || "Ecografía"}</p>
+        `;
 
-      // 🗣️ Voz en pantalla
-      const utterance = new SpeechSynthesisUtterance(
-        `Siguiente turno: ${nombreCompleto}, área de ${area}`
-      );
-      utterance.lang = "es-ES";
-      utterance.rate = 0.9;
-      speechSynthesis.speak(utterance);
+        // Reproducir sonido
+        sonidoTurno.currentTime = 0;
+        sonidoTurno.play();
 
-      // 🕓 Registrar en lista inferior
-      const li = document.createElement("li");
-      li.textContent = `${nombreCompleto} - ${area} (${data.hora})`;
-      ultimosLlamados.prepend(li);
-
-      // Mantener solo los 5 últimos
-      while (ultimosLlamados.children.length > 5) {
-        ultimosLlamados.removeChild(ultimosLlamados.lastChild);
+        // Agregar a lista de últimos
+        const li = document.createElement("li");
+        li.textContent = `${pacienteActual.nombres} ${pacienteActual.apellidos} — ${pacienteActual.estudios}`;
+        listaUltimos.prepend(li);
+        if (listaUltimos.children.length > 5) listaUltimos.removeChild(listaUltimos.lastChild);
       }
     });
   </script>
