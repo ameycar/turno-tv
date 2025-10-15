@@ -46,17 +46,17 @@
       text-align: center;
       background: #d32f2f;
       color: white;
-      padding: 15px 10px;
+      padding: 20px 10px 40px 10px;
       font-size: 1.3rem;
       font-weight: bold;
       position: relative;
     }
 
-    /* Selector de sede */
+    /* Selector de sede - movido hacia abajo */
     #sedeSelect {
       position: absolute;
-      top: 12px;
-      right: 12px;
+      bottom: 5px;
+      right: 10px;
       padding: 5px 8px;
       font-size: 0.9rem;
       border-radius: 6px;
@@ -167,19 +167,30 @@
     let pacientes = [];
     let sedes = {};
 
-    // 🔹 Cargar sedes activas y sus videos
+    // 🔹 Cargar sedes activas y sus videos en tiempo real
     const sedesRef = ref(db, "sedes");
     onValue(sedesRef, (snapshot) => {
       sedeSelect.innerHTML = "";
       sedes = snapshot.val() || {};
-      for (let sede in sedes) {
-        if (sedes[sede].activo) {
+
+      let hayActivas = false;
+      Object.keys(sedes).forEach((key) => {
+        const sede = sedes[key];
+        if (sede.activa === true) {
           const opt = document.createElement("option");
-          opt.value = sede;
-          opt.textContent = sede;
+          opt.value = sede.nombre;
+          opt.textContent = sede.nombre.toUpperCase();
           sedeSelect.appendChild(opt);
+          hayActivas = true;
         }
+      });
+
+      if (!hayActivas) {
+        const opt = document.createElement("option");
+        opt.textContent = "Sin sedes activas";
+        sedeSelect.appendChild(opt);
       }
+
       if (sedeSeleccionada) {
         sedeSelect.value = sedeSeleccionada;
         actualizarVideo();
@@ -196,8 +207,9 @@
 
     // 🔹 Actualizar video dinámicamente
     function actualizarVideo() {
-      if (sedeSeleccionada && sedes[sedeSeleccionada]?.videoUrl) {
-        videoPublicidad.src = sedes[sedeSeleccionada].videoUrl;
+      const sedeEncontrada = Object.values(sedes).find(s => s.nombre === sedeSeleccionada);
+      if (sedeEncontrada && sedeEncontrada.videoUrl) {
+        videoPublicidad.src = sedeEncontrada.videoUrl;
         videoPublicidad.load();
         videoPublicidad.play();
       }
